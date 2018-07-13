@@ -1,6 +1,6 @@
 /* 
  * Author - Dustin Franklin (Nvidia Jetson Developer)
- * Modified by - Sahil Juneja, Kyle Stewart-Frantz
+ * Modified by - Sahil Juneja, Kyle Stewart-Frantz, Erick Ramirez
  *
  */
 
@@ -30,27 +30,22 @@
 #define EPS_END 0.05f
 #define EPS_DECAY 200
 
-/*
-/ TODO - Tune the following hyperparameters
-/
-*/
+//Tune the following hyperparameters
 
-#define INPUT_WIDTH   512
-#define INPUT_HEIGHT  512
-#define OPTIMIZER "None"
-#define LEARNING_RATE 0.0f
+#define INPUT_WIDTH   64
+#define INPUT_HEIGHT  64
+#define OPTIMIZER "RMSprop"
+#define LEARNING_RATE 0.01f
 #define REPLAY_MEMORY 10000
-#define BATCH_SIZE 8
-#define USE_LSTM false
-#define LSTM_SIZE 32
+#define BATCH_SIZE 128
+#define USE_LSTM trye
+#define LSTM_SIZE 256
 
-/*
-/ TODO - Define Reward Parameters
-/
-*/
+//Define Reward Parameters
 
-#define REWARD_WIN  0.0f
-#define REWARD_LOSS -0.0f
+
+#define REWARD_WIN  100.0f
+#define REWARD_LOSS -100.0f
 
 // Define Object Names
 #define WORLD_NAME "arm_world"
@@ -133,22 +128,15 @@ void ArmPlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr /*_sdf*/)
 	// Create our node for camera communication
 	cameraNode->Init();
 	
-	/*
-	/ TODO - Subscribe to camera topic
-	/
-	*/
+	// Subscribe to camera topic
+	cameraSub = cameraNode->Subscribe("/gazebo/arm_world/camera/link/camera/image", &ArmPlugin::onCameraMsg, this);
 	
-	//cameraSub = None;
 
 	// Create our node for collision detection
 	collisionNode->Init();
 		
-	/*
-	/ TODO - Subscribe to prop collision topic
-	/
-	*/
-	
-	//collisionSub = None;
+	//Subscribe to prop collision topic
+	collisionSub = collisionNode->Subscribe("/gazebo/arm_world/tube/tube_link/my_contact", &ArmPlugin::onCollisionMsg, this);
 
 	// Listen to the update event. This event is broadcast every simulation iteration.
 	this->updateConnection = event::Events::ConnectWorldUpdateBegin(boost::bind(&ArmPlugin::OnUpdate, this, _1));
@@ -162,12 +150,12 @@ bool ArmPlugin::createAgent()
 		return true;
 
 			
-	/*
-	/ TODO - Create DQN Agent
-	/
-	*/
+	//Create DQN Agent
 	
-	agent = NULL;
+	agent =  dqnAgent::Create(INPUT_WIDTH, INPUT_HEIGHT, INPUT_CHANNELS, DOF * 2, 
+					  OPTIMIZER,  LEARNING_RATE, REPLAY_MEMORY, BATCH_SIZE, 
+					  GAMMA, EPS_START,  EPS_END,  EPS_DECAY, 
+					  USE_LSTM, LSTM_SIZE, ALLOW_RANDOM, DEBUG_DQN)
 
 	if( !agent )
 	{
@@ -258,23 +246,19 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 			     << "] and [" << contacts->contact(i).collision2() << "]\n";}
 
 	
-		/*
-		/ TODO - Check if there is collision between the arm and object, then issue learning reward
-		/
-		*/
+		// Check if there is collision between the arm and object, then issue learning reward
 		
-		/*
 		
 		if (collisionCheck)
 		{
 			rewardHistory = None;
 
-			newReward  = None;
-			endEpisode = None;
+			newReward  = true;
+			endEpisode = true;
 
 			return;
 		}
-		*/
+
 		
 	}
 }
@@ -311,19 +295,17 @@ bool ArmPlugin::updateAgent()
 
 	if(DEBUG){printf("ArmPlugin - agent selected action %i\n", action);}
 
-
+	const int even_odd = 1 - 2 * (action % 2);
 
 #if VELOCITY_CONTROL
 	// if the action is even, increase the joint position by the delta parameter
 	// if the action is odd,  decrease the joint position by the delta parameter
 
 		
-	/*
-	/ TODO - Increase or decrease the joint velocity based on whether the action is even or odd
-	/
-	*/
-	
-	float velocity = 0.0; // TODO - Set joint velocity based on whether action is even or odd.
+
+	//Increase or decrease the joint velocity based on whether the action is even or odd
+
+	float velocity = vel[action/2] + even_odd * actionVelDelta; // Set joint velocity based on whether action is even or odd.
 
 	if( velocity < VELOCITY_MIN )
 		velocity = VELOCITY_MIN;
@@ -350,11 +332,8 @@ bool ArmPlugin::updateAgent()
 	}
 #else
 	
-	/*
-	/ TODO - Increase or decrease the joint position based on whether the action is even or odd
-	/
-	*/
-	float joint = 0.0; // TODO - Set joint position based on whether action is even or odd.
+	// TODO - Increase or decrease the joint position based on whether the action is even or odd
+	float joint = ref[action/2] + even_odd * actionJointDelta; // Set joint position based on whether action is even or odd.
 
 	// limit the joint to the specified range
 	if( joint < JOINT_MIN )
@@ -573,13 +552,10 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		const math::Box& gripBBox = gripper->GetBoundingBox();
 		const float groundContact = 0.05f;
 		
-		/*
-		/ TODO - set appropriate Reward for robot hitting the ground.
-		/
-		*/
+		//set appropriate Reward for robot hitting the ground.
 		
 		
-		/*if(checkGroundContact)
+		if(checkGroundContact)
 		{
 						
 			if(DEBUG){printf("GROUND CONTACT, EOE\n");}
@@ -588,7 +564,7 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 			newReward     = None;
 			endEpisode    = None;
 		}
-		*/
+		
 		
 		/*
 		/ TODO - Issue an interim reward based on the distance to the object
