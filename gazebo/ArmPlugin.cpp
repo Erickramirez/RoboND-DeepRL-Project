@@ -155,7 +155,7 @@ bool ArmPlugin::createAgent()
 	agent =  dqnAgent::Create(INPUT_WIDTH, INPUT_HEIGHT, INPUT_CHANNELS, DOF * 2, 
 					  OPTIMIZER,  LEARNING_RATE, REPLAY_MEMORY, BATCH_SIZE, 
 					  GAMMA, EPS_START,  EPS_END,  EPS_DECAY, 
-					  USE_LSTM, LSTM_SIZE, ALLOW_RANDOM, DEBUG_DQN)
+					  USE_LSTM, LSTM_SIZE, ALLOW_RANDOM, DEBUG_DQN);
 
 	if( !agent )
 	{
@@ -247,11 +247,14 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 
 	
 		// Check if there is collision between the arm and object, then issue learning reward
+		const bool collisionCheck = ( strcmp(contacts->contact(i).collision1().c_str(), COLLISION_ITEM) == 0 );
 		
 		
 		if (collisionCheck)
 		{
-			rewardHistory = None;
+			const bool collisionGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
+			
+			rewardHistory = collisionGripper ? (REWARD_WIN * 1000): (REWARD_LOSS);
 
 			newReward  = true;
 			endEpisode = true;
@@ -553,16 +556,16 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		const float groundContact = 0.05f;
 		
 		//set appropriate Reward for robot hitting the ground.
-		
+		const bool checkGroundContact = ( gripBBox.min.z <= groundContact || gripBBox.max.z <= groundContact );
 		
 		if(checkGroundContact)
 		{
 						
 			if(DEBUG){printf("GROUND CONTACT, EOE\n");}
 
-			rewardHistory = None;
-			newReward     = None;
-			endEpisode    = None;
+			rewardHistory = REWARD_LOSS * distGoal * 10;
+			newReward     = true;
+			endEpisode    = true;
 		}
 		
 		
@@ -571,10 +574,10 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		/
 		*/ 
 		
-		/*
+		
 		if(!checkGroundContact)
 		{
-			const float distGoal = 0; // compute the reward from distance to the goal
+			const float distGoal = BoxDistance(gripBBox, propBBox); // compute the reward from distance to the goal
 
 			if(DEBUG){printf("distance('%s', '%s') = %f\n", gripper->GetName().c_str(), prop->model->GetName().c_str(), distGoal);}
 
@@ -582,15 +585,19 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 			if( episodeFrames > 1 )
 			{
 				const float distDelta  = lastGoalDistance - distGoal;
+				avgGoalDelta  = (avgGoalDelta * ALPHA) + (distDelta * (1.0f - ALPHA));
 
 				// compute the smoothed moving average of the delta of the distance to the goal
-				avgGoalDelta  = 0.0;
-				rewardHistory = None;
-				newReward     = None;	
+				if (distDelta<0.001 && distDelta>-0.001)
+                	rewardHistory = REWARD_LOSS / (200);
+				else
+					rewardHistory = REWARD_WIN * distDelta / (40);
+				newReward     = true;	
+				
 			}
 
 			lastGoalDistance = distGoal;
-		} */
+		} 
 	}
 
 	// issue rewards and train DQN
