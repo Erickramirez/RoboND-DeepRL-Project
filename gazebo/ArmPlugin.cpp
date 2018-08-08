@@ -27,18 +27,18 @@
 #define DEBUG_DQN false
 #define GAMMA 0.9f
 #define EPS_START 0.9f
-#define EPS_END 0.05f
+#define EPS_END 0.02f
 #define EPS_DECAY 200
 
 //Tune the following hyperparameters
 
 #define INPUT_WIDTH   64
 #define INPUT_HEIGHT  64
-#define OPTIMIZER "RMSprop"
+#define OPTIMIZER "Adam"
 #define LEARNING_RATE 0.01f
 #define REPLAY_MEMORY 10000
-#define BATCH_SIZE 128
-#define USE_LSTM trye
+#define BATCH_SIZE 256
+#define USE_LSTM true
 #define LSTM_SIZE 256
 
 //Define Reward Parameters
@@ -66,6 +66,7 @@
 
 // Lock base rotation DOF (Add dof in header file if off)
 #define LOCKBASE true
+
 
 
 namespace gazebo
@@ -153,7 +154,8 @@ bool ArmPlugin::createAgent()
 			
 	//Create DQN Agent
 	
-	agent =  dqnAgent::Create(INPUT_WIDTH, INPUT_HEIGHT, INPUT_CHANNELS, DOF * 2, 
+	agent =  dqnAgent::Create(INPUT_WIDTH, INPUT_HEIGHT, 
+						INPUT_CHANNELS, DOF * 2, 
 					  OPTIMIZER,  LEARNING_RATE, REPLAY_MEMORY, BATCH_SIZE, 
 					  GAMMA, EPS_START,  EPS_END,  EPS_DECAY, 
 					  USE_LSTM, LSTM_SIZE, ALLOW_RANDOM, DEBUG_DQN);
@@ -253,9 +255,9 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		
 		if (collisionCheck)
 		{
-			const bool collisionGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
+			const bool collisionWithGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
 			
-			rewardHistory = collisionGripper ? (REWARD_WIN * 1000): (REWARD_LOSS);
+			rewardHistory = collisionWithGripper ? (REWARD_WIN) : (REWARD_LOSS);
 
 			newReward  = true;
 			endEpisode = true;
@@ -564,7 +566,7 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 						
 			if(DEBUG){printf("GROUND CONTACT, EOE\n");}
 
-			rewardHistory = REWARD_LOSS * distGoal * 10;
+			rewardHistory = REWARD_LOSS;
 			newReward     = true;
 			endEpisode    = true;
 		}
@@ -589,10 +591,7 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 				avgGoalDelta  = (avgGoalDelta * ALPHA) + (distDelta * (1.0f - ALPHA));
 
 				// compute the smoothed moving average of the delta of the distance to the goal
-				if (distDelta<0.001 && distDelta>-0.001)
-                	rewardHistory = REWARD_LOSS / (200);
-				else
-					rewardHistory = REWARD_WIN * distDelta / (40);
+					rewardHistory = (REWARD_WIN * distDelta / 5.0f )*avgGoalDelta - (REWARD_LOSS / 65 );
 				newReward     = true;	
 				
 			}
