@@ -35,7 +35,7 @@
 #define INPUT_WIDTH   64
 #define INPUT_HEIGHT  64
 #define OPTIMIZER "Adam"
-#define LEARNING_RATE 0.01f
+#define LEARNING_RATE 0.1f
 #define REPLAY_MEMORY 10000
 #define BATCH_SIZE 256
 #define USE_LSTM true
@@ -258,7 +258,7 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 			// if gripper_link is the second element in collision list
 			const bool collisionWithGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
 			
-
+			
 			rewardHistory = collisionWithGripper ? (REWARD_WIN) : (REWARD_LOSS);
 
 			newReward  = true;
@@ -583,12 +583,15 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 			const float distGoal = BoxDistance(gripBBox, propBBox); // compute the reward from distance to the goal
 
 			if(DEBUG){printf("distance('%s', '%s') = %f\n", gripper->GetName().c_str(), prop->model->GetName().c_str(), distGoal);}
+			
 
 			
 			if( episodeFrames > 1 )
 			{
 				const float distDelta  = lastGoalDistance - distGoal;
+				printf("distance('%s', '%s') = %f\n", gripper->GetName().c_str(), prop->model->GetName().c_str(), distGoal);
 				avgGoalDelta  = (avgGoalDelta * ALPHA) + (distDelta * (1.0f - ALPHA));
+			
 
 				// compute the smoothed moving average of the delta of the distance to the goal
 					rewardHistory = (REWARD_WIN * distDelta / 5.0f )*avgGoalDelta - (REWARD_LOSS / 65 );
