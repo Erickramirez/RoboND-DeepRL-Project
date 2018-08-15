@@ -26,7 +26,7 @@
 #define ALLOW_RANDOM true
 #define DEBUG_DQN false
 #define GAMMA 0.9f
-#define EPS_START 0.9f
+#define EPS_START 0.6f
 #define EPS_END 0.02f
 #define EPS_DECAY 200
 
@@ -255,8 +255,10 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		
 		if (collisionCheck)
 		{
+			// if gripper_link is the second element in collision list
 			const bool collisionWithGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
 			
+
 			rewardHistory = collisionWithGripper ? (REWARD_WIN) : (REWARD_LOSS);
 
 			newReward  = true;
@@ -338,7 +340,7 @@ bool ArmPlugin::updateAgent()
 	}
 #else
 	
-	// TODO - Increase or decrease the joint position based on whether the action is even or odd
+	// Increase or decrease the joint position based on whether the action is even or odd
 	float joint = ref[action/2] + even_odd * actionJointDelta; // Set joint position based on whether action is even or odd.
 
 	// limit the joint to the specified range
@@ -572,11 +574,9 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		}
 		
 		
-		/*
-		/ TODO - Issue an interim reward based on the distance to the object
-		/
-		*/ 
-		
+
+		//Issue an interim reward based on the distance to the object
+
 		
 		if(!checkGroundContact)
 		{
