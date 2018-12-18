@@ -35,10 +35,10 @@
 #define INPUT_WIDTH   64
 #define INPUT_HEIGHT  64
 #define OPTIMIZER "RMSprop"
-#define LEARNING_RATE 0.01f
+#define LEARNING_RATE 0.001f
 #define REPLAY_MEMORY 10000
-#define BATCH_SIZE 128
-#define USE_LSTM trye
+#define BATCH_SIZE 512
+#define USE_LSTM true
 #define LSTM_SIZE 256
 
 //Define Reward Parameters
@@ -248,14 +248,14 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 
 	
 		// Check if there is collision between the arm and object, then issue learning reward
-		const bool collisionCheck = ( strcmp(contacts->contact(i).collision1().c_str(), COLLISION_ITEM) == 0 );
+		bool collisionCheck = ( strcmp(contacts->contact(i).collision1().c_str(), COLLISION_ITEM) == 0 );
 		
 		
 		if (collisionCheck)
 		{
-			const bool collisionGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
+			bool collisionGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
 			
-			rewardHistory = collisionGripper ? (REWARD_WIN * 1000): (REWARD_LOSS);
+			rewardHistory = collisionGripper ? (REWARD_WIN * 100): (REWARD_LOSS); 
 
 			newReward  = true;
 			endEpisode = true;
@@ -299,17 +299,15 @@ bool ArmPlugin::updateAgent()
 
 	if(DEBUG){printf("ArmPlugin - agent selected action %i\n", action);}
 
-	const int even_odd = 1 - 2 * (action % 2);
-
+	int even_odd = 1 - 2 * (action % 2);
 #if VELOCITY_CONTROL
 	// if the action is even, increase the joint position by the delta parameter
 	// if the action is odd,  decrease the joint position by the delta parameter
 
-		
 
 	//Increase or decrease the joint velocity based on whether the action is even or odd
 
-	float velocity = vel[action/2] + even_odd * actionVelDelta; // Set joint velocity based on whether action is even or odd.
+	float velocity = vel[action/2] + even_odd * actionVelDelta; //Set joint velocity based on whether action is even or odd.
 
 	if( velocity < VELOCITY_MIN )
 		velocity = VELOCITY_MIN;
@@ -557,14 +555,14 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 		const float groundContact = 0.05f;
 		
 		//set appropriate Reward for robot hitting the ground.
-		const bool checkGroundContact = ( gripBBox.min.z <= groundContact || gripBBox.max.z <= groundContact );
+		bool checkGroundContact = ( gripBBox.min.z <= groundContact || gripBBox.max.z <= groundContact );
 		
 		if(checkGroundContact)
 		{
 						
 			if(DEBUG){printf("GROUND CONTACT, EOE\n");}
 
-			rewardHistory = REWARD_LOSS * distGoal * 10;
+			rewardHistory = REWARD_LOSS * distGoal * 100;//it is ended
 			newReward     = true;
 			endEpisode    = true;
 		}
@@ -586,13 +584,13 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 			if( episodeFrames > 1 )
 			{
 				const float distDelta  = lastGoalDistance - distGoal;
-				avgGoalDelta  = (avgGoalDelta * ALPHA) + (distDelta * (1.0f - ALPHA));
+				avgGoalDelta  = (avgGoalDelta * ALPHA) + (distGoal * (1.0f - ALPHA));
 
 				// compute the smoothed moving average of the delta of the distance to the goal
 				if (distDelta<0.001 && distDelta>-0.001)
-                	rewardHistory = REWARD_LOSS / (200);
+                	rewardHistory = REWARD_LOSS / (100); //try to move, then it is a loss
 				else
-					rewardHistory = REWARD_WIN * distDelta / (40);
+					rewardHistory = REWARD_WIN * avgGoalDelta / (100);
 				newReward     = true;	
 				
 			}
