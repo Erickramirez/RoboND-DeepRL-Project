@@ -113,6 +113,7 @@ ArmPlugin::ArmPlugin() : ModelPlugin(), cameraNode(new gazebo::transport::Node()
 	lastGoalDistance = 0.0f;
 	avgGoalDelta     = 0.0f;
 	successfulGrabs = 0;
+	successfulgripperBase = 0;
 	totalRuns       = 0;
 }
 
@@ -256,7 +257,7 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		{
 			bool collisionGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
 			
-			rewardHistory = collisionGripper ? (REWARD_WIN * 100): (REWARD_LOSS/2); 
+			rewardHistory = collisionGripper ? (REWARD_WIN * 1000): (REWARD_WIN*10); 
 
 
 			newReward  = true;
@@ -621,10 +622,14 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 
 			// track the number of wins and agent accuracy
 			if( rewardHistory >= REWARD_WIN )
+			{
 				successfulGrabs++;
+				if ( rewardHistory >= REWARD_WIN * 1000 )//reward touching gripper
+					successfulgripperBase++;
+			}
 
 			totalRuns++;
-			printf("Current Accuracy:  %0.4f (%03u of %03u)  (reward=%+0.2f %s)\n", float(successfulGrabs)/float(totalRuns), successfulGrabs, totalRuns, rewardHistory, (rewardHistory >= REWARD_WIN ? "WIN" : "LOSS"));
+			printf("Current Accuracy for robot arm touch:  %0.4f (%03u of %03u ), current Accuracy for gripper base touch:  %0.4f (%03u of %03u )  (reward=%+0.2f %s)\n", float(successfulGrabs)/float(totalRuns), successfulGrabs, totalRuns, float(successfulgripperBase)/float(totalRuns), successfulgripperBase, totalRuns, rewardHistory, (rewardHistory >= REWARD_WIN ? "WIN" : "LOSS"));
 
 
 			for( uint32_t n=0; n < DOF; n++ )
