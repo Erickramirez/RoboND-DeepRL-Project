@@ -26,8 +26,8 @@
 #define ALLOW_RANDOM true
 #define DEBUG_DQN false
 #define GAMMA 0.9f
-#define EPS_START 0.6f
-#define EPS_END 0.02f
+#define EPS_START 0.9f
+#define EPS_END 0.05f
 #define EPS_DECAY 200
 
 //Tune the following hyperparameters
@@ -39,7 +39,7 @@
 #define REPLAY_MEMORY 10000
 #define BATCH_SIZE 256
 #define USE_LSTM true
-#define LSTM_SIZE 256
+#define LSTM_SIZE 64
 
 //Define Reward Parameters
 
@@ -66,7 +66,6 @@
 
 // Lock base rotation DOF (Add dof in header file if off)
 #define LOCKBASE true
-
 
 
 namespace gazebo
@@ -586,9 +585,9 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 			if( episodeFrames > 1 )
 			{
 				const float distDelta  = lastGoalDistance - distGoal;
-				avgGoalDelta  = (avgGoalDelta * ALPHA) + (distGoal * (1.0f - ALPHA));
-
 				// compute the smoothed moving average of the delta of the distance to the goal
+				avgGoalDelta  = (avgGoalDelta * ALPHA) + (distDelta * (1.0f - ALPHA));
+
 				if (distDelta<0.001 && distDelta>-0.001)
                 	rewardHistory = REWARD_LOSS / (100); //try to move, then it is a loss
 				else
