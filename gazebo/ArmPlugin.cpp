@@ -39,13 +39,13 @@
 #define REPLAY_MEMORY 10000
 #define BATCH_SIZE 256
 #define USE_LSTM true
-#define LSTM_SIZE 64
+#define LSTM_SIZE 256
 
 //Define Reward Parameters
 
 
-#define REWARD_WIN  100.0f
-#define REWARD_LOSS -100.0f
+#define REWARD_WIN  10.0f
+#define REWARD_LOSS -10.0f
 #define ALPHA 0.2f
 
 // Define Object Names
@@ -256,7 +256,7 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		{
 			bool collisionGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
 			
-			rewardHistory = collisionGripper ? (REWARD_WIN * 100): (REWARD_LOSS); 
+			rewardHistory = collisionGripper ? (REWARD_WIN * 100): (REWARD_LOSS/2); 
 
 
 			newReward  = true;
@@ -565,7 +565,7 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 						
 			if(DEBUG){printf("GROUND CONTACT, EOE\n");}
 
-			rewardHistory = REWARD_LOSS * distGoal * 100;//it is ended
+			rewardHistory = REWARD_LOSS * distGoal * 10;//it is ended
 			newReward     = true;
 			endEpisode    = true;
 		}
@@ -589,9 +589,9 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 				avgGoalDelta  = (avgGoalDelta * ALPHA) + (distDelta * (1.0f - ALPHA));
 
 				if (distDelta<0.001 && distDelta>-0.001)
-                	rewardHistory = REWARD_LOSS / (100); //try to move, then it is a loss
+                	rewardHistory = REWARD_LOSS / (20); //try to move, then it is a loss
 				else
-					rewardHistory = REWARD_WIN * avgGoalDelta / (100);
+					rewardHistory = REWARD_WIN * avgGoalDelta / (20);
 				newReward     = true;	
 				
 			}
