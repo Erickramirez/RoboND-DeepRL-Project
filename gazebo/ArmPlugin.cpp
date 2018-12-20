@@ -63,6 +63,10 @@
 
 // Set Debug Mode
 #define DEBUG false
+// Set OBJECTIVE 
+//    OBJECTIVE =1: Have any part of the robot arm touch the object of interest, with at least a 90% accuracy for a minimum of 100 runs.
+//    OBJECTIVE =2: Have only the gripper base of the robot arm touch the object, with at least a 80% accuracy for a minimum of 100 runs.
+#define OBJECTIVE 1
 
 // Lock base rotation DOF (Add dof in header file if off)
 #define LOCKBASE true
@@ -113,7 +117,6 @@ ArmPlugin::ArmPlugin() : ModelPlugin(), cameraNode(new gazebo::transport::Node()
 	lastGoalDistance = 0.0f;
 	avgGoalDelta     = 0.0f;
 	successfulGrabs = 0;
-	successfulgripperBase = 0;
 	totalRuns       = 0;
 }
 
@@ -257,7 +260,13 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		{
 			bool collisionGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
 			
-			rewardHistory = collisionGripper ? (REWARD_WIN * 1000): (REWARD_WIN*10); 
+			if (OBJECTIVE == 1) 
+			{	
+				rewardHistory = collisionGripper ? (REWARD_WIN * 1000): (REWARD_lOSS); 
+			}
+			else {
+				rewardHistory = REWARD_WIN;
+			}
 
 
 			newReward  = true;
@@ -624,12 +633,10 @@ void ArmPlugin::OnUpdate(const common::UpdateInfo& updateInfo)
 			if( rewardHistory >= REWARD_WIN )
 			{
 				successfulGrabs++;
-				if ( rewardHistory >= REWARD_WIN * 1000 )//reward touching gripper
-					successfulgripperBase++;
 			}
 
 			totalRuns++;
-			printf("Current Accuracy for robot arm touch:  %0.4f (%03u of %03u ), current Accuracy for gripper base touch:  %0.4f (%03u of %03u )  (reward=%+0.2f %s)\n", float(successfulGrabs)/float(totalRuns), successfulGrabs, totalRuns, float(successfulgripperBase)/float(totalRuns), successfulgripperBase, totalRuns, rewardHistory, (rewardHistory >= REWARD_WIN ? "WIN" : "LOSS"));
+			printf("Current Accuracy:  %0.4f (%03u of %03u ) (reward=%+0.2f %s)\n", float(successfulGrabs)/float(totalRuns), successfulGrabs, totalRuns, rewardHistory, (rewardHistory >= REWARD_WIN ? "WIN" : "LOSS"));
 
 
 			for( uint32_t n=0; n < DOF; n++ )
