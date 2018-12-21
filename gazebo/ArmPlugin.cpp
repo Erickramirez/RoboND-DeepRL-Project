@@ -66,7 +66,7 @@
 // Set OBJECTIVE 
 //    OBJECTIVE =1: Have any part of the robot arm touch the object of interest, with at least a 90% accuracy for a minimum of 100 runs.
 //    OBJECTIVE =2: Have only the gripper base of the robot arm touch the object, with at least a 80% accuracy for a minimum of 100 runs.
-#define OBJECTIVE 1
+#define OBJECTIVE 2
 
 // Lock base rotation DOF (Add dof in header file if off)
 #define LOCKBASE true
@@ -260,12 +260,12 @@ void ArmPlugin::onCollisionMsg(ConstContactsPtr &contacts)
 		{
 			bool collisionGripper = ( strcmp(contacts->contact(i).collision2().c_str(), COLLISION_POINT) == 0 );
 			
-			if (OBJECTIVE == 1) 
+			if (OBJECTIVE == 2) 
 			{	
-				rewardHistory = collisionGripper ? (REWARD_WIN * 1000): (REWARD_lOSS); 
+				rewardHistory = collisionGripper ? (REWARD_WIN * 1000): (REWARD_LOSS); 
 			}
 			else {
-				rewardHistory = REWARD_WIN;
+				rewardHistory = collisionGripper ? (REWARD_WIN * 1000): (REWARD_WIN*10); 
 			}
 
 
